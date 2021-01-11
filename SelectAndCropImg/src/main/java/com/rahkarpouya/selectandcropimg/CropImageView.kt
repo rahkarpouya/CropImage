@@ -1,4 +1,4 @@
-package com.majazeh.selectandcropimg
+package com.rahkarpouya.selectandcropimg
 
 import BitmapLoadingWorkerTask
 import android.app.Activity
@@ -17,9 +17,8 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.ProgressBar
 import androidx.exifinterface.media.ExifInterface
-import com.majazeh.selectandcropimg.*
-import com.majazeh.selectandcropimg.CropOverlayView
-import com.majazeh.selectandcropimg.CropOverlayView.CropWindowChangeListener
+import com.rahkarpouya.selectandcropimg.*
+import com.rahkarpouya.selectandcropimg.CropOverlayView.CropWindowChangeListener
 import java.lang.ref.WeakReference
 import java.util.*
 

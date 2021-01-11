@@ -2,8 +2,8 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.AsyncTask
-import com.majazeh.selectandcropimg.BitmapUtils
-import com.majazeh.selectandcropimg.CropImageView
+import com.rahkarpouya.selectandcropimg.BitmapUtils
+import com.rahkarpouya.selectandcropimg.CropImageView
 import java.lang.ref.WeakReference
 
 /** Task to load bitmap asynchronously from the UI thread.  */

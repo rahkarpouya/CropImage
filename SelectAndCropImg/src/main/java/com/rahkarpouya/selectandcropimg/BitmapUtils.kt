@@ -1,4 +1,4 @@
-package com.majazeh.selectandcropimg
+package com.rahkarpouya.selectandcropimg
 
 import android.content.ContentResolver
 import android.content.Context
@@ -8,7 +8,7 @@ import android.net.Uri
 import android.util.Log
 import android.util.Pair
 import androidx.exifinterface.media.ExifInterface
-import com.majazeh.selectandcropimg.CropImageView.RequestSizeOptions
+import com.rahkarpouya.selectandcropimg.CropImageView.RequestSizeOptions
 import java.io.*
 import java.lang.ref.WeakReference
 import javax.microedition.khronos.egl.EGL10

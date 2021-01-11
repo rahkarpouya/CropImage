@@ -1,4 +1,4 @@
-package com.majazeh.selectandcropimg
+package com.rahkarpouya.selectandcropimg
 
 import android.graphics.Matrix
 import android.graphics.RectF
@@ -7,7 +7,6 @@ import android.view.animation.Animation
 import android.view.animation.Animation.AnimationListener
 import android.view.animation.Transformation
 import android.widget.ImageView
-import com.majazeh.selectandcropimg.CropOverlayView
 
 internal class CropImageAnimation(
     // region: Fields and Consts

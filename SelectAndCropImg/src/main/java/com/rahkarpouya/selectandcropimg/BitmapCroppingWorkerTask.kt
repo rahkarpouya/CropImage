@@ -1,12 +1,12 @@
-package com.majazeh.selectandcropimg
+package com.rahkarpouya.selectandcropimg
 
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Bitmap.CompressFormat
 import android.net.Uri
 import android.os.AsyncTask
-import com.majazeh.selectandcropimg.BitmapUtils.BitmapSampled
-import com.majazeh.selectandcropimg.CropImageView.RequestSizeOptions
+import com.rahkarpouya.selectandcropimg.BitmapUtils.BitmapSampled
+import com.rahkarpouya.selectandcropimg.CropImageView.RequestSizeOptions
 import java.lang.ref.WeakReference
 
 class BitmapCroppingWorkerTask : AsyncTask<Void?, Void?, BitmapCroppingWorkerTask.Result?> {

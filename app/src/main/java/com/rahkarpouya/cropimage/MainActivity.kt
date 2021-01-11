@@ -1,4 +1,4 @@
-package com.majazeh.cropimage
+package com.rahkarpouya.cropimage
 
 import android.app.Activity
 import android.content.Intent
@@ -7,8 +7,8 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.widget.AppCompatImageView
-import com.majazeh.selectandcropimg.CropImage
-import com.majazeh.selectandcropimg.CropImageView
+import com.rahkarpouya.selectandcropimg.CropImage
+import com.rahkarpouya.selectandcropimg.CropImageView
 
 class MainActivity : AppCompatActivity() {
 

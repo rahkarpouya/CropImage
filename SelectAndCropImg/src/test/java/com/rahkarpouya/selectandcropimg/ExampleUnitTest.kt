@@ -1,4 +1,4 @@
-package com.majazeh.selectandcropimg
+package com.rahkarpouya.selectandcropimg
 
 import org.junit.Test
 

@@ -1,4 +1,4 @@
-package com.majazeh.cropimage
+package com.rahkarpouya.selectandcropimg
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -19,6 +19,6 @@ class ExampleInstrumentedTest {
     fun useAppContext() {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("com.majazeh.cropimage", appContext.packageName)
+        assertEquals("com.majazeh.selectandcropimg.test", appContext.packageName)
     }
 }

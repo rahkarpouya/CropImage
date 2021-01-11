@@ -1,4 +1,4 @@
-package com.majazeh.selectandcropimg
+package com.rahkarpouya.selectandcropimg
 
 import android.annotation.TargetApi
 import android.content.Context
@@ -10,8 +10,8 @@ import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.ScaleGestureDetector.SimpleOnScaleGestureListener
 import android.view.View
-import com.majazeh.selectandcropimg.CropImageView.CropShape
-import com.majazeh.selectandcropimg.CropImageView.Guidelines
+import com.rahkarpouya.selectandcropimg.CropImageView.CropShape
+import com.rahkarpouya.selectandcropimg.CropImageView.Guidelines
 import java.util.*
 
 /** A custom View representing the crop window and the shaded background outside the crop window.  */

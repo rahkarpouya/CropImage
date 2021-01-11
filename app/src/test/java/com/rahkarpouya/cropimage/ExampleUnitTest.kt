@@ -1,4 +1,4 @@
-package com.majazeh.cropimage
+package com.rahkarpouya.cropimage
 
 import org.junit.Test
 

@@ -1,4 +1,4 @@
-package com.majazeh.selectandcropimg
+package com.rahkarpouya.selectandcropimg
 
 import android.Manifest
 import android.app.Activity
@@ -19,7 +19,7 @@ import androidx.annotation.Nullable
 import androidx.annotation.RequiresApi
 import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
-import com.majazeh.selectandcropimg.CropImageView.*
+import com.rahkarpouya.selectandcropimg.CropImageView.*
 import java.io.File
 import java.util.*
 

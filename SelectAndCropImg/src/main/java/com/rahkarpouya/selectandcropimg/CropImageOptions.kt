@@ -1,4 +1,4 @@
-package com.majazeh.selectandcropimg
+package com.rahkarpouya.selectandcropimg
 
 import android.content.res.Resources
 import android.graphics.Bitmap.CompressFormat
@@ -9,7 +9,7 @@ import android.os.Parcel
 import android.os.Parcelable
 import android.text.TextUtils
 import android.util.TypedValue
-import com.majazeh.selectandcropimg.CropImageView.*
+import com.rahkarpouya.selectandcropimg.CropImageView.*
 
 open class CropImageOptions : Parcelable {
     /** The shape of the cropping window.  */
