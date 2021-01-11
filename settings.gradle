@@ -1,0 +1,3 @@
+include ':SelectAndCropImg'
+include ':app'
+rootProject.name = "CropImage"
