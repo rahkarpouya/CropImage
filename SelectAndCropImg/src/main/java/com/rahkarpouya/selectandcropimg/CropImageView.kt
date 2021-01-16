@@ -1,12 +1,9 @@
 package com.rahkarpouya.selectandcropimg
 
-import BitmapLoadingWorkerTask
 import android.app.Activity
 import android.content.Context
 import android.graphics.*
-import android.graphics.Bitmap.CompressFormat
 import android.net.Uri
-import android.os.AsyncTask
 import android.os.Bundle
 import android.os.Parcelable
 import android.util.AttributeSet
@@ -16,9 +13,16 @@ import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.ProgressBar
+import androidx.appcompat.widget.AppCompatImageView
 import androidx.exifinterface.media.ExifInterface
-import com.rahkarpouya.selectandcropimg.*
-import com.rahkarpouya.selectandcropimg.CropOverlayView.CropWindowChangeListener
+import com.rahkarpouya.selectandcropimg.core.BitmapCroppingWorkerAsync
+import com.rahkarpouya.selectandcropimg.core.BitmapLoadingWorkerAsync
+import com.rahkarpouya.selectandcropimg.enumClass.CropShape
+import com.rahkarpouya.selectandcropimg.enumClass.CropGuidelines
+import com.rahkarpouya.selectandcropimg.enumClass.RequestSizeOptions
+import com.rahkarpouya.selectandcropimg.enumClass.ScaleType
+import com.rahkarpouya.selectandcropimg.utils.BitmapUtils
+import kotlinx.coroutines.cancel
 import java.lang.ref.WeakReference
 import java.util.*
 
@@ -28,28 +32,39 @@ class CropImageView @JvmOverloads constructor(
 ) : FrameLayout(context, attrs) {
     // region: Fields and Consts
     /** Image view widget used to show the image for cropping.  */
-    private val mImageView: ImageView
+    private val mImageView: AppCompatImageView
+
     /** Overlay over the image view to show cropping UI.  */
     private val mCropOverlayView: CropOverlayView?
+
     /** The matrix used to transform the cropping image in the image view  */
     private val mImageMatrix = Matrix()
+
     /** Reusing matrix instance for reverse matrix calculations.  */
     private val mImageInverseMatrix = Matrix()
+
     /** Progress bar widget to show progress bar on async image loading and cropping.  */
     private val mProgressBar: ProgressBar
+
     /** Rectangle used in image matrix transformation calculation (reusing rect instance)  */
     private val mImagePoints = FloatArray(8)
+
     /** Rectangle used in image matrix transformation for scale calculation (reusing rect instance)  */
     private val mScaleImagePoints = FloatArray(8)
+
     /** Animation class to smooth animate zoom-in/out  */
     private var mAnimation: CropImageAnimation? = null
     private var mBitmap: Bitmap? = null
+
     /** The image rotation value used during loading of the image so we can reset to it  */
     private var mInitialDegreesRotated = 0
+
     /** How much the image is rotated from original clockwise  */
     private var mDegreesRotated = 0
+
     /** if the image flipped horizontally  */
     private var mFlipHorizontally: Boolean
+
     /** if the image flipped vertically  */
     private var mFlipVertically: Boolean
     private var mLayoutWidth = 0
@@ -78,64 +93,82 @@ class CropImageView @JvmOverloads constructor(
      * bitmap requires saving it to file which can be expensive. default: false.
      */
     var isSaveBitmapToInstanceState = false
+
     /**
      * if to show crop overlay UI what contains the crop window UI surrounded by background over the
      * cropping image.<br></br>
      * default: true, may disable for animation or frame transition.
      */
     private var mShowCropOverlay = true
+
     /**
      * if to show progress bar when image async loading/cropping is in progress.<br></br>
      * default: true, disable to provide custom progress bar UI.
      */
     private var mShowProgressBar = true
+
     /**
      * if auto-zoom functionality is enabled.<br></br>
      * default: true.
      */
     private var mAutoZoomEnabled = true
+
     /** The max zoom allowed during cropping  */
     private var mMaxZoom: Int
+
     /** callback to be invoked when crop overlay is released.  */
     private var mOnCropOverlayReleasedListener: OnSetCropOverlayReleasedListener? = null
+
     /** callback to be invoked when crop overlay is moved.  */
     private var mOnSetCropOverlayMovedListener: OnSetCropOverlayMovedListener? = null
+
     /** callback to be invoked when crop window is changed.  */
     private var mOnSetCropWindowChangeListener: OnSetCropWindowChangeListener? = null
+
     /** callback to be invoked when image async loading is complete.  */
     private var mOnSetImageUriCompleteListener: OnSetImageUriCompleteListener? = null
+
     /** callback to be invoked when image async cropping is complete.  */
     private var mOnCropImageCompleteListener: OnCropImageCompleteListener? = null
     /** Get the URI of an image that was set by URI, null otherwise.  */
     /** The URI that the image was loaded from (if loaded from URI)  */
     var imageUri: Uri? = null
-        private set
+
     /** The sample size the image was loaded by if was loaded by URI  */
     private var mLoadedSampleSize = 1
+
     /** The current zoom level to to scale the cropping image  */
     private var mZoom = 1f
+
     /** The X offset that the cropping image was translated after zooming  */
     private var mZoomOffsetX = 0f
+
     /** The Y offset that the cropping image was translated after zooming  */
     private var mZoomOffsetY = 0f
+
     /** Used to restore the cropping windows rectangle after state restore  */
     private var mRestoreCropWindowRect: RectF? = null
+
     /** Used to restore image rotation after state restore  */
     private var mRestoreDegreesRotated = 0
+
     /**
      * Used to detect size change to handle auto-zoom using [.handleCropWindowChanged] in [.layout].
      */
     private var mSizeChanged = false
+
     /**
      * Temp URI used to save bitmap image to disk to preserve for instance state in case cropped was
      * set with bitmap
      */
     private var mSaveInstanceStateBitmapUri: Uri? = null
+
     /** Task used to load bitmap async from UI thread  */
-    private var mBitmapLoadingWorkerTask: WeakReference<BitmapLoadingWorkerTask>? =
+    private var mBitmapLoadingWorkerTask: WeakReference<BitmapLoadingWorkerAsync>? =
         null
+
     /** Task used to crop bitmap async from UI thread  */
-    private var mBitmapCroppingWorkerTask: WeakReference<BitmapCroppingWorkerTask>? =
+    private var mBitmapCroppingWorkerTask: WeakReference<BitmapCroppingWorkerAsync>? =
         null
 
     /** Set the scale type of the image in the crop view  */
@@ -246,10 +279,10 @@ class CropImageView @JvmOverloads constructor(
      * Sets the guidelines for the CropOverlayView to be either on, off, or to show when resizing the
      * application.
      */
-    var guidelines: Guidelines?
-        get() = mCropOverlayView!!.guidelines
+    var cropGuidelines: CropGuidelines?
+        get() = mCropOverlayView!!.cropGuidelines
         set(guidelines) {
-            mCropOverlayView!!.guidelines = guidelines
+            mCropOverlayView!!.cropGuidelines = guidelines
         }
 
     /** both the X and Y values of the aspectRatio.  */
@@ -417,7 +450,7 @@ class CropImageView @JvmOverloads constructor(
             mImageInverseMatrix.mapPoints(points)
 
             for (i in points.indices) {
-                 points[i] *= mLoadedSampleSize.toFloat()
+                points[i] *= mLoadedSampleSize.toFloat()
             }
             return points
         }
@@ -602,7 +635,7 @@ class CropImageView @JvmOverloads constructor(
     @JvmOverloads
     fun saveCroppedImageAsync(
         saveUri: Uri?,
-        saveCompressFormat: CompressFormat? = CompressFormat.JPEG,
+        saveCompressFormat: Bitmap.CompressFormat? = Bitmap.CompressFormat.JPEG,
         saveCompressQuality: Int = 90,
         reqWidth: Int = 0,
         reqHeight: Int = 0,
@@ -693,19 +726,19 @@ class CropImageView @JvmOverloads constructor(
         if (uri != null) {
             val currentTask =
                 if (mBitmapLoadingWorkerTask != null) mBitmapLoadingWorkerTask!!.get() else null
-            currentTask?.cancel(true)
+            currentTask?.cancel()
             // either no existing task is working or we canceled it, need to load new URI
             clearImageInt()
             mRestoreCropWindowRect = null
             mRestoreDegreesRotated = 0
             mCropOverlayView!!.initialCropWindowRect = null
             mBitmapLoadingWorkerTask = WeakReference(
-                BitmapLoadingWorkerTask(
+                BitmapLoadingWorkerAsync(
                     this,
                     uri
                 )
             )
-            mBitmapLoadingWorkerTask!!.get()!!.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
+            mBitmapLoadingWorkerTask!!.get()!!.fetChData()
             setProgressBarVisibility()
         }
     }
@@ -809,26 +842,32 @@ class CropImageView @JvmOverloads constructor(
      * On complete of the async bitmap loading by [.setImageUriAsync] set the result to the
      * widget if still relevant and call listener if set.
      *
-     * @param result the result of bitmap loading
+     * @param loadingResult the result of bitmap loading
      */
-    fun onSetImageUriAsyncComplete(result: BitmapLoadingWorkerTask.Result) {
+    fun onSetImageUriAsyncComplete(loadingResult: ImageLoadingResult) {
         mBitmapLoadingWorkerTask = null
         setProgressBarVisibility()
-        if (result.error == null) {
-            mInitialDegreesRotated = result.degreesRotated
-            setBitmap(result.bitmap, 0, result.uri, result.loadSampleSize, result.degreesRotated)
+        if (loadingResult.error == null) {
+            mInitialDegreesRotated = loadingResult.degreesRotated
+            setBitmap(
+                loadingResult.bitmap,
+                0,
+                loadingResult.uri,
+                loadingResult.loadSampleSize,
+                loadingResult.degreesRotated
+            )
         }
         val listener = mOnSetImageUriCompleteListener
-        listener?.onSetImageUriComplete(this, result.uri, result.error)
+        listener?.onSetImageUriComplete(this, loadingResult.uri, loadingResult.error)
     }
 
     /**
      * On complete of the async bitmap cropping by [.getCroppedImageAsync] call listener if
      * set.
      *
-     * @param result the result of bitmap cropping
+     * @param loadingResult the result of bitmap cropping
      */
-    fun onImageCroppingAsyncComplete(result: BitmapCroppingWorkerTask.Result) {
+    fun onImageCroppingAsyncComplete(loadingResult: ImageCroppingResult) {
         mBitmapCroppingWorkerTask = null
         setProgressBarVisibility()
         val listener = mOnCropImageCompleteListener
@@ -836,14 +875,14 @@ class CropImageView @JvmOverloads constructor(
             val cropResult = CropResult(
                 mBitmap,
                 imageUri,
-                result.bitmap,
-                result.uri,
-                result.error,
+                loadingResult.bitmap,
+                loadingResult.uri,
+                loadingResult.error,
                 cropPoints,
                 cropRect,
                 wholeImageRect,
                 rotatedDegrees,
-                result.sampleSize
+                loadingResult.sampleSize
             )
             listener.onCropImageComplete(this, cropResult)
         }
@@ -923,7 +962,7 @@ class CropImageView @JvmOverloads constructor(
         reqHeight: Int,
         options: RequestSizeOptions?,
         saveUri: Uri?,
-        saveCompressFormat: CompressFormat?,
+        saveCompressFormat: Bitmap.CompressFormat?,
         saveCompressQuality: Int
     ) {
         var reqWidth1 = reqWidth
@@ -933,7 +972,7 @@ class CropImageView @JvmOverloads constructor(
             mImageView.clearAnimation()
             val currentTask =
                 if (mBitmapCroppingWorkerTask != null) mBitmapCroppingWorkerTask!!.get() else null
-            currentTask?.cancel(true)
+            currentTask?.cancel()
             reqWidth1 = if (options != RequestSizeOptions.NONE) reqWidth1 else 0
             reqHeight1 = if (options != RequestSizeOptions.NONE) reqHeight1 else 0
             val orgWidth = bitmap.width * mLoadedSampleSize
@@ -942,7 +981,7 @@ class CropImageView @JvmOverloads constructor(
                 && (mLoadedSampleSize > 1 || options == RequestSizeOptions.SAMPLING)
             ) {
                 WeakReference(
-                    BitmapCroppingWorkerTask(
+                    BitmapCroppingWorkerAsync(
                         this,
                         imageUri,
                         cropPoints,
@@ -964,7 +1003,7 @@ class CropImageView @JvmOverloads constructor(
                 )
             } else {
                 WeakReference(
-                    BitmapCroppingWorkerTask(
+                    BitmapCroppingWorkerAsync(
                         this,
                         bitmap,
                         cropPoints,
@@ -983,7 +1022,7 @@ class CropImageView @JvmOverloads constructor(
                     )
                 )
             }
-            mBitmapCroppingWorkerTask!!.get()!!.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
+            mBitmapCroppingWorkerTask!!.get()!!.fetchData()
             setProgressBarVisibility()
         }
     }
@@ -1035,54 +1074,53 @@ class CropImageView @JvmOverloads constructor(
 
     public override fun onRestoreInstanceState(state: Parcelable) {
         if (state is Bundle) {
-            val bundle = state
             // prevent restoring state if already set by outside code
             if (mBitmapLoadingWorkerTask == null && imageUri == null && mBitmap == null && mImageResource == 0
             ) {
                 var uri =
-                    bundle.getParcelable<Uri>("LOADED_IMAGE_URI")
+                    state.getParcelable<Uri>("LOADED_IMAGE_URI")
                 if (uri != null) {
-                    val key = bundle.getString("LOADED_IMAGE_STATE_BITMAP_KEY")
+                    val key = state.getString("LOADED_IMAGE_STATE_BITMAP_KEY")
                     if (key != null) {
                         val stateBitmap =
                             if (BitmapUtils.mStateBitmap != null && BitmapUtils.mStateBitmap!!.first == key) BitmapUtils.mStateBitmap!!.second.get() else null
                         BitmapUtils.mStateBitmap = null
                         if (stateBitmap != null && !stateBitmap.isRecycled) {
-                            setBitmap(stateBitmap, 0, uri, bundle.getInt("LOADED_SAMPLE_SIZE"), 0)
+                            setBitmap(stateBitmap, 0, uri, state.getInt("LOADED_SAMPLE_SIZE"), 0)
                         }
                     }
                     if (imageUri == null) {
                         setImageUriAsync(uri)
                     }
                 } else {
-                    val resId = bundle.getInt("LOADED_IMAGE_RESOURCE")
+                    val resId = state.getInt("LOADED_IMAGE_RESOURCE")
                     if (resId > 0) {
                         imageResource = resId
                     } else {
-                        uri = bundle.getParcelable("LOADING_IMAGE_URI")
+                        uri = state.getParcelable("LOADING_IMAGE_URI")
                         uri?.let { setImageUriAsync(it) }
                     }
                 }
-                mRestoreDegreesRotated = bundle.getInt("DEGREES_ROTATED")
+                mRestoreDegreesRotated = state.getInt("DEGREES_ROTATED")
                 mDegreesRotated = mRestoreDegreesRotated
                 val initialCropRect =
-                    bundle.getParcelable<Rect>("INITIAL_CROP_RECT")
+                    state.getParcelable<Rect>("INITIAL_CROP_RECT")
                 if (initialCropRect != null
                     && (initialCropRect.width() > 0 || initialCropRect.height() > 0)
                 ) {
                     mCropOverlayView!!.initialCropWindowRect = initialCropRect
                 }
-                val cropWindowRect = bundle.getParcelable<RectF>("CROP_WINDOW_RECT")
+                val cropWindowRect = state.getParcelable<RectF>("CROP_WINDOW_RECT")
                 if (cropWindowRect != null && (cropWindowRect.width() > 0 || cropWindowRect.height() > 0)) {
                     mRestoreCropWindowRect = cropWindowRect
                 }
-                mCropOverlayView!!.cropShape = CropShape.valueOf(bundle.getString("CROP_SHAPE")!!)
-                mAutoZoomEnabled = bundle.getBoolean("CROP_AUTO_ZOOM_ENABLED")
-                mMaxZoom = bundle.getInt("CROP_MAX_ZOOM")
-                mFlipHorizontally = bundle.getBoolean("CROP_FLIP_HORIZONTALLY")
-                mFlipVertically = bundle.getBoolean("CROP_FLIP_VERTICALLY")
+                mCropOverlayView!!.cropShape = CropShape.valueOf(state.getString("CROP_SHAPE")!!)
+                mAutoZoomEnabled = state.getBoolean("CROP_AUTO_ZOOM_ENABLED")
+                mMaxZoom = state.getInt("CROP_MAX_ZOOM")
+                mFlipHorizontally = state.getBoolean("CROP_FLIP_HORIZONTALLY")
+                mFlipVertically = state.getBoolean("CROP_FLIP_VERTICALLY")
             }
-            super.onRestoreInstanceState(bundle.getParcelable("instanceState"))
+            super.onRestoreInstanceState(state.getParcelable("instanceState"))
         } else {
             super.onRestoreInstanceState(state)
         }
@@ -1153,22 +1191,25 @@ class CropImageView @JvmOverloads constructor(
             origParams.height = mLayoutHeight
             layoutParams = origParams
             if (mBitmap != null) {
-                applyImageMatrix(r - l.toFloat(), b - t.toFloat(), true, false)
+                applyImageMatrix(r - l.toFloat(), b - t.toFloat(), center = true, animate = false)
                 // after state restore we want to restore the window crop, possible only after widget size
-// is known
                 if (mRestoreCropWindowRect != null) {
                     if (mRestoreDegreesRotated != mInitialDegreesRotated) {
                         mDegreesRotated = mRestoreDegreesRotated
-                        applyImageMatrix(r - l.toFloat(), b - t.toFloat(), true, false)
+                        applyImageMatrix(
+                            r - l.toFloat(), b - t.toFloat(),
+                            center = true,
+                            animate = false
+                        )
                     }
                     mImageMatrix.mapRect(mRestoreCropWindowRect)
                     mCropOverlayView!!.cropWindowRect = mRestoreCropWindowRect
-                    handleCropWindowChanged(false, false)
+                    handleCropWindowChanged(inProgress = false, animate = false)
                     mCropOverlayView.fixCurrentCropWindowRect()
                     mRestoreCropWindowRect = null
                 } else if (mSizeChanged) {
                     mSizeChanged = false
-                    handleCropWindowChanged(false, false)
+                    handleCropWindowChanged(inProgress = false, animate = false)
                 }
             } else {
                 updateImageBounds(true)
@@ -1313,8 +1354,8 @@ class CropImageView @JvmOverloads constructor(
             mImageMatrix.mapRect(cropRect)
             if (center) { // set the zoomed area to be as to the center of cropping window as possible
                 mZoomOffsetX =
-                    if (width > BitmapUtils.getRectWidth(mImagePoints)) 0F else Math.min(
-                        width / 2 - cropRect!!.centerX(), -BitmapUtils.getRectLeft(mImagePoints)
+                    if (width > BitmapUtils.getRectWidth(mImagePoints)) 0F else (width / 2 - cropRect!!.centerX()).coerceAtMost(
+                        -BitmapUtils.getRectLeft(mImagePoints)
                     ).coerceAtLeast(getWidth() - BitmapUtils.getRectRight(mImagePoints)) / scaleX
                 mZoomOffsetY =
                     if (height > BitmapUtils.getRectHeight(mImagePoints)) 0F else Math.min(
@@ -1418,91 +1459,22 @@ class CropImageView @JvmOverloads constructor(
      * The possible cropping area shape.<br></br>
      * To set square/circle crop shape set aspect ratio to 1:1.
      */
-    enum class CropShape {
-        RECTANGLE, OVAL
-    }
+
     // endregion
 // region: Inner class: ScaleType
     /**
      * Options for scaling the bounds of cropping image to the bounds of Crop Image View.<br></br>
      * Note: Some options are affected by auto-zoom, if enabled.
      */
-    enum class ScaleType {
-        /**
-         * Scale the image uniformly (maintain the image's aspect ratio) to fit in crop image view.<br></br>
-         * The largest dimension will be equals to crop image view and the second dimension will be
-         * smaller.
-         */
-        FIT_CENTER,
-        /**
-         * Center the image in the view, but perform no scaling.<br></br>
-         * Note: If auto-zoom is enabled and the source image is smaller than crop image view then it
-         * will be scaled uniformly to fit the crop image view.
-         */
-        CENTER,
-        /**
-         * Scale the image uniformly (maintain the image's aspect ratio) so that both dimensions (width
-         * and height) of the image will be equal to or **larger** than the corresponding dimension
-         * of the view (minus padding).<br></br>
-         * The image is then centered in the view.
-         */
-        CENTER_CROP,
-        /**
-         * Scale the image uniformly (maintain the image's aspect ratio) so that both dimensions (width
-         * and height) of the image will be equal to or **less** than the corresponding dimension of
-         * the view (minus padding).<br></br>
-         * The image is then centered in the view.<br></br>
-         * Note: If auto-zoom is enabled and the source image is smaller than crop image view then it
-         * will be scaled uniformly to fit the crop image view.
-         */
-        CENTER_INSIDE
-    }
+
     // endregion
 // region: Inner class: Guidelines
     /** The possible guidelines showing types.  */
-    enum class Guidelines {
-        /** Never show  */
-        OFF,
-        /** Show when crop move action is live  */
-        ON_TOUCH,
-        /** Always show  */
-        ON
-    }
+
     // endregion
 // region: Inner class: RequestSizeOptions
     /** Possible options for handling requested width/height for cropping.  */
-    enum class RequestSizeOptions {
-        /** No resize/sampling is done unless required for memory management (OOM).  */
-        NONE,
-        /**
-         * Only sample the image during loading (if image set using URI) so the smallest of the image
-         * dimensions will be between the requested size and x2 requested size.<br></br>
-         * NOTE: resulting image will not be exactly requested width/height see: [Loading
- * Large Bitmaps Efficiently](http://developer.android.com/training/displaying-bitmaps/load-bitmap.html).
-         */
-        SAMPLING,
-        /**
-         * Resize the image uniformly (maintain the image's aspect ratio) so that both dimensions (width
-         * and height) of the image will be equal to or **less** than the corresponding requested
-         * dimension.<br></br>
-         * If the image is smaller than the requested size it will NOT change.
-         */
-        RESIZE_INSIDE,
-        /**
-         * Resize the image uniformly (maintain the image's aspect ratio) to fit in the given
-         * width/height.<br></br>
-         * The largest dimension will be equals to the requested and the second dimension will be
-         * smaller.<br></br>
-         * If the image is smaller than the requested size it will enlarge it.
-         */
-        RESIZE_FIT,
-        /**
-         * Resize the image to fit exactly in the given width/height.<br></br>
-         * This resize method does NOT preserve aspect ratio.<br></br>
-         * If the image is smaller than the requested size it will enlarge it.
-         */
-        RESIZE_EXACT
-    }
+
     // endregion
 // region: Inner class: OnSetImageUriCompleteListener
     /** Interface definition for a callback to be invoked when the crop overlay is released.  */
@@ -1641,17 +1613,17 @@ class CropImageView @JvmOverloads constructor(
             measureSpecMode: Int,
             measureSpecSize: Int,
             desiredSize: Int
-        ): Int { // Measure Width
-            val spec: Int
-            spec = if (measureSpecMode == MeasureSpec.EXACTLY) { // Must be this size
-                measureSpecSize
-            } else if (measureSpecMode == MeasureSpec.AT_MOST) { // Can't be bigger than...; match_parent value
-                Math.min(desiredSize, measureSpecSize)
-            } else { // Be whatever you want; wrap_content
-                desiredSize
+        ): Int = // Measure Width
+            when (measureSpecMode) {
+                MeasureSpec.EXACTLY -> { // Must be this size
+                    measureSpecSize
+                }
+                MeasureSpec.AT_MOST -> { // Can't be bigger than...; match_parent value
+                    desiredSize.coerceAtMost(measureSpecSize)
+                }
+                else -> desiredSize // Be whatever you want; wrap_content
             }
-            return spec
-        }
+
     }
 
     // endregion
@@ -1701,10 +1673,10 @@ class CropImageView @JvmOverloads constructor(
                             R.styleable.CropImageView_cropShape,
                             options.cropShape.ordinal
                         )]
-                    options.guidelines =
-                        Guidelines.values()[ta.getInt(
+                    options.cropGuidelines =
+                        CropGuidelines.values()[ta.getInt(
                             R.styleable.CropImageView_cropGuidelines,
-                            options.guidelines.ordinal
+                            options.cropGuidelines.ordinal
                         )]
                     options.snapRadius = ta.getDimension(
                         R.styleable.CropImageView_cropSnapRadius,
@@ -1824,7 +1796,7 @@ class CropImageView @JvmOverloads constructor(
         mImageView.scaleType = ImageView.ScaleType.MATRIX
         mCropOverlayView = v.findViewById(R.id.CropOverlayView)
         mCropOverlayView.setCropWindowChangeListener(
-            object : CropWindowChangeListener {
+            object : CropOverlayView.CropWindowChangeListener {
                 override fun onCropWindowChanged(inProgress: Boolean) {
                     handleCropWindowChanged(inProgress, true)
                     val listener = mOnCropOverlayReleasedListener

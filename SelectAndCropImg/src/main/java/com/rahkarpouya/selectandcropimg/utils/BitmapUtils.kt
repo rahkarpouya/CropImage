@@ -1,4 +1,4 @@
-package com.rahkarpouya.selectandcropimg
+package com.rahkarpouya.selectandcropimg.utils
 
 import android.content.ContentResolver
 import android.content.Context
@@ -8,7 +8,7 @@ import android.net.Uri
 import android.util.Log
 import android.util.Pair
 import androidx.exifinterface.media.ExifInterface
-import com.rahkarpouya.selectandcropimg.CropImageView.RequestSizeOptions
+import com.rahkarpouya.selectandcropimg.enumClass.RequestSizeOptions
 import java.io.*
 import java.lang.ref.WeakReference
 import javax.microedition.khronos.egl.EGL10
@@ -399,7 +399,6 @@ internal object BitmapUtils {
     }
 
     /** Write the given bitmap to the given uri using the given compression.  */
-    @Throws(FileNotFoundException::class)
     fun writeBitmapToUri(
         context: Context,
         bitmap: Bitmap?,

@@ -17,7 +17,6 @@ import android.view.MenuItem
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import com.rahkarpouya.selectandcropimg.CropImageView.*
 import java.io.File
 import java.io.IOException
 
@@ -25,8 +24,8 @@ import java.io.IOException
  * Built-in activity for image cropping.<br></br>
  * Use [CropImage.activity] to create a builder to start this activity.
  */
-open class CropImageActivity : AppCompatActivity(), OnSetImageUriCompleteListener,
-    OnCropImageCompleteListener {
+open class CropImageActivity : AppCompatActivity(), CropImageView.OnSetImageUriCompleteListener,
+    CropImageView.OnCropImageCompleteListener {
     /** The crop image view library widget used in the activity  */
     private var mCropImageView: CropImageView? = null
     /** Persist URI image to crop URI if specific permissions are required  */
@@ -234,7 +233,7 @@ open class CropImageActivity : AppCompatActivity(), OnSetImageUriCompleteListene
         }
     }
 
-    override fun onCropImageComplete(view: CropImageView?, result: CropResult) {
+    override fun onCropImageComplete(view: CropImageView?, result: CropImageView.CropResult) {
         setResult(result.uri, result.error, result.sampleSize)
     }
     // region: Private methods

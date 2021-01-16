@@ -9,139 +9,188 @@ import android.os.Parcel
 import android.os.Parcelable
 import android.text.TextUtils
 import android.util.TypedValue
-import com.rahkarpouya.selectandcropimg.CropImageView.*
+import com.rahkarpouya.selectandcropimg.enumClass.CropShape
+import com.rahkarpouya.selectandcropimg.enumClass.CropGuidelines
+import com.rahkarpouya.selectandcropimg.enumClass.RequestSizeOptions
+import com.rahkarpouya.selectandcropimg.enumClass.ScaleType
 
 open class CropImageOptions : Parcelable {
     /** The shape of the cropping window.  */
     var cropShape: CropShape
+
     /**
      * An edge of the crop window will snap to the corresponding edge of a specified bounding box when
      * the crop window edge is less than or equal to this distance (in pixels) away from the bounding
      * box edge. (in pixels)
      */
     var snapRadius: Float
+
     /**
      * The radius of the touchable area around the handle. (in pixels)<br></br>
      * We are basing this value off of the recommended 48dp Rhythm.<br></br>
      * See: http://developer.android.com/design/style/metrics-grids.html#48dp-rhythm
      */
     var touchRadius: Float
+
     /** whether the guidelines should be on, off, or only showing when resizing.  */
-    var guidelines: Guidelines
+    var cropGuidelines: CropGuidelines
+
     /** The initial scale type of the image in the crop image view  */
     var scaleType: ScaleType
+
     /**
      * if to show crop overlay UI what contains the crop window UI surrounded by background over the
      * cropping image.<br></br>
      * default: true, may disable for animation or frame transition.
      */
     var showCropOverlay: Boolean
+
     /**
      * if to show progress bar when image async loading/cropping is in progress.<br></br>
      * default: true, disable to provide custom progress bar UI.
      */
     var showProgressBar: Boolean
+
     /**
      * if auto-zoom functionality is enabled.<br></br>
      * default: true.
      */
     var autoZoomEnabled: Boolean
+
     /** if multi-touch should be enabled on the crop box default: false  */
     var multiTouchEnabled: Boolean
+
     /** The max zoom allowed during cropping.  */
     var maxZoom: Int
+
     /**
      * The initial crop window padding from image borders in percentage of the cropping image
      * dimensions.
      */
     var initialCropWindowPaddingRatio: Float
+
     /** whether the width to height aspect ratio should be maintained or free to change.  */
     var fixAspectRatio: Boolean
+
     /** the X value of the aspect ratio.  */
     var aspectRatioX: Int
+
     /** the Y value of the aspect ratio.  */
     var aspectRatioY: Int
+
     /** the thickness of the guidelines lines in pixels. (in pixels)  */
     var borderLineThickness: Float
+
     /** the color of the guidelines lines  */
     var borderLineColor: Int
+
     /** thickness of the corner line. (in pixels)  */
     var borderCornerThickness: Float
+
     /** the offset of corner line from crop window border. (in pixels)  */
     var borderCornerOffset: Float
+
     /** the length of the corner line away from the corner. (in pixels)  */
     var borderCornerLength: Float
+
     /** the color of the corner line  */
     var borderCornerColor: Int
+
     /** the thickness of the guidelines lines. (in pixels)  */
     var guidelinesThickness: Float
+
     /** the color of the guidelines lines  */
     var guidelinesColor: Int
+
     /**
      * the color of the overlay background around the crop window cover the image parts not in the
      * crop window.
      */
     var backgroundColor: Int
+
     /** the min width the crop window is allowed to be. (in pixels)  */
     var minCropWindowWidth: Int
+
     /** the min height the crop window is allowed to be. (in pixels)  */
     var minCropWindowHeight: Int
+
     /**
      * the min width the resulting cropping image is allowed to be, affects the cropping window
      * limits. (in pixels)
      */
     var minCropResultWidth: Int
+
     /**
      * the min height the resulting cropping image is allowed to be, affects the cropping window
      * limits. (in pixels)
      */
     var minCropResultHeight: Int
+
     /**
      * the max width the resulting cropping image is allowed to be, affects the cropping window
      * limits. (in pixels)
      */
     var maxCropResultWidth: Int
+
     /**
      * the max height the resulting cropping image is allowed to be, affects the cropping window
      * limits. (in pixels)
      */
     var maxCropResultHeight: Int
-    /** the title of the [CropImageActivity]  */
+
     var activityTitle: CharSequence?
+
     /** the color to use for action bar items icons  */
     var activityMenuIconColor: Int
+
     /** the Android Uri to save the cropped image to  */
     var outputUri: Uri?
+
     /** the compression format to use when writing the image  */
     var outputCompressFormat: CompressFormat
+
     /** the quality (if applicable) to use when writing the image (0 - 100)  */
     var outputCompressQuality: Int
+
     /** the width to resize the cropped image to (see options)  */
     var outputRequestWidth: Int
+
     /** the height to resize the cropped image to (see options)  */
     var outputRequestHeight: Int
+
     /** the resize method to use on the cropped bitmap (see options documentation)  */
     var outputRequestSizeOptions: RequestSizeOptions
+
     /** if the result of crop image activity should not save the cropped image bitmap  */
     var noOutputImage: Boolean
+
     /** the initial rectangle to set on the cropping image after loading  */
     var initialCropWindowRectangle: Rect?
+
     /** the initial rotation to set on the cropping image after loading (0-360 degrees clockwise)  */
     var initialRotation: Int
+
     /** if to allow (all) rotation during cropping (activity)  */
     var allowRotation: Boolean
+
     /** if to allow (all) flipping during cropping (activity)  */
     var allowFlipping: Boolean
+
     /** if to allow counter-clockwise rotation during cropping (activity)  */
     var allowCounterRotation: Boolean
+
     /** the amount of degrees to rotate clockwise or counter-clockwise  */
     var rotationDegrees: Int
+
     /** whether the image should be flipped horizontally  */
     var flipHorizontally: Boolean
+
     /** whether the image should be flipped vertically  */
     var flipVertically: Boolean
+
     /** optional, the text of the crop menu crop button  */
     var cropMenuCropButtonTitle: CharSequence?
+
     /** optional image resource to be used for crop menu crop icon instead of text  */
     var cropMenuCropButtonIcon: Int
 
@@ -151,7 +200,7 @@ open class CropImageOptions : Parcelable {
         cropShape = CropShape.RECTANGLE
         snapRadius = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 3f, dm)
         touchRadius = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 24f, dm)
-        guidelines = Guidelines.ON_TOUCH
+        cropGuidelines = CropGuidelines.ON_TOUCH
         scaleType = ScaleType.FIT_CENTER
         showCropOverlay = true
         showProgressBar = true
@@ -204,7 +253,7 @@ open class CropImageOptions : Parcelable {
         cropShape = CropShape.values()[`in`.readInt()]
         snapRadius = `in`.readFloat()
         touchRadius = `in`.readFloat()
-        guidelines = Guidelines.values()[`in`.readInt()]
+        cropGuidelines = CropGuidelines.values()[`in`.readInt()]
         scaleType = ScaleType.values()[`in`.readInt()]
         showCropOverlay = `in`.readByte().toInt() != 0
         showProgressBar = `in`.readByte().toInt() != 0
@@ -255,7 +304,7 @@ open class CropImageOptions : Parcelable {
         dest.writeInt(cropShape.ordinal)
         dest.writeFloat(snapRadius)
         dest.writeFloat(touchRadius)
-        dest.writeInt(guidelines.ordinal)
+        dest.writeInt(cropGuidelines.ordinal)
         dest.writeInt(scaleType.ordinal)
         dest.writeByte((if (showCropOverlay) 1 else 0).toByte())
         dest.writeByte((if (showProgressBar) 1 else 0).toByte())

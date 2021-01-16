@@ -1,4 +1,4 @@
-package com.rahkarpouya.selectandcropimg
+package com.rahkarpouya.selectandcropimg.utils
 
 import android.annotation.SuppressLint
 import android.annotation.TargetApi

@@ -1,7 +1,7 @@
 package com.rahkarpouya.selectandcropimg
 
 import android.graphics.RectF
-import com.rahkarpouya.selectandcropimg.CropImageView.CropShape
+import com.rahkarpouya.selectandcropimg.enumClass.CropShape
 import kotlin.math.abs
 
 /** Handler from crop window stuff, moving and knowing possition.  */

@@ -1,6 +1,7 @@
 package com.rahkarpouya.selectandcropimg
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ComponentName
 import android.content.Context
@@ -16,10 +17,13 @@ import android.os.Parcelable
 import android.provider.MediaStore
 import androidx.annotation.DrawableRes
 import androidx.annotation.Nullable
-import androidx.annotation.RequiresApi
 import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
-import com.rahkarpouya.selectandcropimg.CropImageView.*
+import com.rahkarpouya.selectandcropimg.enumClass.CropShape
+import com.rahkarpouya.selectandcropimg.enumClass.CropGuidelines
+import com.rahkarpouya.selectandcropimg.enumClass.RequestSizeOptions
+import com.rahkarpouya.selectandcropimg.enumClass.ScaleType
+import com.rahkarpouya.selectandcropimg.utils.FileUtil
 import java.io.File
 import java.util.*
 
@@ -121,7 +125,9 @@ object CropImage {
      */
     fun getPickImageChooserIntent(context: Context): Intent {
         return getPickImageChooserIntent(
-            context, context.getString(R.string.pick_image_intent_chooser_title), false, true
+            context, context.getString(R.string.pick_image_intent_chooser_title),
+            includeDocuments = false,
+            includeCamera = true
         )
     }
 
@@ -150,7 +156,7 @@ object CropImage {
         }
         var galleryIntents =
             getGalleryIntents(packageManager, Intent.ACTION_GET_CONTENT, includeDocuments)
-        if (galleryIntents.size == 0) { // if no intents found for get-content try pick intent action (Huawei P9).
+        if (galleryIntents.isEmpty()) { // if no intents found for get-content try pick intent action (Huawei P9).
             galleryIntents =
                 getGalleryIntents(packageManager, Intent.ACTION_PICK, includeDocuments)
         }
@@ -182,32 +188,31 @@ object CropImage {
      * @param outputFileUri the Uri where the picture will be placed.
      */
     fun getCameraIntent(context: Context, outputFileUri: Uri?): Intent {
-        var outputFileUri = outputFileUri
+        var otpFileUri = outputFileUri
         val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-        if (outputFileUri == null) {
-            outputFileUri = getCaptureImageOutputUri(context)
+        if (otpFileUri == null) {
+            otpFileUri = getCaptureImageOutputUri(context)
         }
-        intent.putExtra(MediaStore.EXTRA_OUTPUT, outputFileUri)
+        intent.putExtra(MediaStore.EXTRA_OUTPUT, otpFileUri)
         return intent
     }
 
     /** Get all Camera intents for capturing image using device camera apps.  */
+    @SuppressLint("QueryPermissionsNeeded")
     fun getCameraIntents(
         context: Context, packageManager: PackageManager
     ): List<Intent> {
-        val allIntents: MutableList<Intent> = ArrayList()
+        val allIntents: MutableList<Intent> = mutableListOf()
         // Determine Uri of camera image to  save.
         val outputFileUri = getCaptureImageOutputUri(context)
         val captureIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-        val listCam =
-            packageManager.queryIntentActivities(captureIntent, 0)
+        val listCam = packageManager.queryIntentActivities(captureIntent, 0)
         for (res in listCam) {
             val intent = Intent(captureIntent)
             intent.component = ComponentName(res.activityInfo.packageName, res.activityInfo.name)
             intent.setPackage(res.activityInfo.packageName)
-            if (outputFileUri != null) {
+            if (outputFileUri != null)
                 intent.putExtra(MediaStore.EXTRA_OUTPUT, outputFileUri)
-            }
             allIntents.add(intent)
         }
         return allIntents
@@ -217,6 +222,7 @@ object CropImage {
      * Get all Gallery intents for getting image from one of the apps of the device that handle
      * images.
      */
+    @SuppressLint("QueryPermissionsNeeded")
     fun getGalleryIntents(
         packageManager: PackageManager, action: String, includeDocuments: Boolean
     ): List<Intent> {
@@ -263,9 +269,9 @@ object CropImage {
         try {
             val packageInfo = context.packageManager
                 .getPackageInfo(packageName, PackageManager.GET_PERMISSIONS)
-            val declaredPermisisons = packageInfo.requestedPermissions
-            if (declaredPermisisons != null && declaredPermisisons.size > 0) {
-                for (p in declaredPermisisons) {
+            val declaredPermissions = packageInfo.requestedPermissions
+            if (declaredPermissions != null && declaredPermissions.isNotEmpty()) {
+                for (p in declaredPermissions) {
                     if (p.equals(permissionName, ignoreCase = true)) {
                         return true
                     }
@@ -437,23 +443,7 @@ object CropImage {
          *
          * @param fragment fragment to receive result
          */
-        fun start(
-            context: Context,
-            fragment: Fragment
-        ) {
-            fragment.startActivityForResult(
-                getIntent(context),
-                CROP_IMAGE_ACTIVITY_REQUEST_CODE
-            )
-        }
-
-        /**
-         * Start [CropImageActivity].
-         *
-         * @param fragment fragment to receive result
-         */
-        @RequiresApi(api = Build.VERSION_CODES.HONEYCOMB)
-        fun start(context: Context, fragment: android.app.Fragment) {
+        fun start(context: Context, fragment: Fragment) {
             fragment.startActivityForResult(
                 getIntent(context),
                 CROP_IMAGE_ACTIVITY_REQUEST_CODE
@@ -468,23 +458,6 @@ object CropImage {
         fun start(
             context: Context,
             fragment: Fragment,
-            cls: Class<*>?
-        ) {
-            fragment.startActivityForResult(
-                getIntent(context, cls),
-                CROP_IMAGE_ACTIVITY_REQUEST_CODE
-            )
-        }
-
-        /**
-         * Start [CropImageActivity].
-         *
-         * @param fragment fragment to receive result
-         */
-        @RequiresApi(api = Build.VERSION_CODES.HONEYCOMB)
-        fun start(
-            context: Context,
-            fragment: android.app.Fragment,
             cls: Class<*>?
         ) {
             fragment.startActivityForResult(
@@ -529,8 +502,8 @@ object CropImage {
          * whether the guidelines should be on, off, or only showing when resizing.<br></br>
          * *Default: ON_TOUCH*
          */
-        fun setGuidelines(guidelines: Guidelines): ActivityBuilder {
-            mOptions.guidelines = guidelines
+        fun setGuidelines(cropGuidelines: CropGuidelines): ActivityBuilder {
+            mOptions.cropGuidelines = cropGuidelines
             return this
         }
 
@@ -909,9 +882,9 @@ object CropImage {
 
     }
     // endregion
-// region: Inner class: ActivityResult
+    // region: Inner class: ActivityResult
     /** Result data of Crop Image Activity.  */
-    open class ActivityResult : CropResult, Parcelable {
+    open class ActivityResult : CropImageView.CropResult, Parcelable {
         constructor(
             originalUri: Uri?,
             uri: Uri?,

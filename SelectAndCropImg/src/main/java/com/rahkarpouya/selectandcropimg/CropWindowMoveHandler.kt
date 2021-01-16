@@ -16,13 +16,17 @@ internal class CropWindowMoveHandler(
     touchY: Float
 ) {
     /** Minimum width in pixels that the crop window can get.  */
-    private val mMinCropWidth: Float
+    private val mMinCropWidth: Float = cropWindowHandler.minCropWidth
+
     /** Minimum width in pixels that the crop window can get.  */
-    private val mMinCropHeight: Float
+    private val mMinCropHeight: Float = cropWindowHandler.minCropHeight
+
     /** Maximum height in pixels that the crop window can get.  */
-    private val mMaxCropWidth: Float
+    private val mMaxCropWidth: Float = cropWindowHandler.maxCropWidth
+
     /** Maximum height in pixels that the crop window can get.  */
-    private val mMaxCropHeight: Float
+    private val mMaxCropHeight: Float = cropWindowHandler.maxCropHeight
+
     /**
      * Holds the x and y offset between the exact touch location and the exact handle location that is
      * activated. There may be an offset because we allow for some leeway (specified by mHandleRadius)
@@ -64,9 +68,9 @@ internal class CropWindowMoveHandler(
         fixedAspectRatio: Boolean,
         aspectRatio: Float
     ) { // Adjust the coordinates for the finger position's offset (i.e. the
-// distance from the initial touch to the precise handle location).
-// We want to maintain the initial touch's distance to the pressed
-// handle so that the crop window size does not "jump".
+        // distance from the initial touch to the precise handle location).
+        // We want to maintain the initial touch's distance to the pressed
+        // handle so that the crop window size does not "jump".
         val adjX = x + mTouchOffset.x
         val adjY = y + mTouchOffset.y
         if (mType == Type.CENTER) {
@@ -139,8 +143,6 @@ internal class CropWindowMoveHandler(
                 touchOffsetX = rect!!.centerX() - touchX
                 touchOffsetY = rect.centerY() - touchY
             }
-            else -> {
-            }
         }
         mTouchOffset.x = touchOffsetX
         mTouchOffset.y = touchOffsetY
@@ -188,20 +190,32 @@ internal class CropWindowMoveHandler(
     ) {
         when (mType) {
             Type.TOP_LEFT -> {
-                adjustTop(rect, y, bounds, snapMargin, 0f, false, false)
-                adjustLeft(rect, x, bounds, snapMargin, 0f, false, false)
+                adjustTop(rect, y, bounds, snapMargin, 0f, leftMoves = false, rightMoves = false)
+                adjustLeft(rect, x, bounds, snapMargin, 0f, topMoves = false, bottomMoves = false)
             }
             Type.TOP_RIGHT -> {
-                adjustTop(rect, y, bounds, snapMargin, 0f, false, false)
-                adjustRight(rect, x, bounds, viewWidth, snapMargin, 0f, false, false)
+                adjustTop(rect, y, bounds, snapMargin, 0f, false, rightMoves = false)
+                adjustRight(rect, x, bounds, viewWidth, snapMargin, 0f, false, bottomMoves = false)
             }
             Type.BOTTOM_LEFT -> {
-                adjustBottom(rect, y, bounds, viewHeight, snapMargin, 0f, false, false)
-                adjustLeft(rect, x, bounds, snapMargin, 0f, false, false)
+                adjustBottom(
+                    rect, y, bounds, viewHeight, snapMargin, 0f,
+                    leftMoves = false,
+                    rightMoves = false
+                )
+                adjustLeft(rect, x, bounds, snapMargin, 0f, topMoves = false, bottomMoves = false)
             }
             Type.BOTTOM_RIGHT -> {
-                adjustBottom(rect, y, bounds, viewHeight, snapMargin, 0f, false, false)
-                adjustRight(rect, x, bounds, viewWidth, snapMargin, 0f, false, false)
+                adjustBottom(
+                    rect, y, bounds, viewHeight, snapMargin, 0f,
+                    leftMoves = false,
+                    rightMoves = false
+                )
+                adjustRight(
+                    rect, x, bounds, viewWidth, snapMargin, 0f,
+                    topMoves = false,
+                    bottomMoves = false
+                )
             }
             Type.LEFT -> adjustLeft(
                 rect,
@@ -209,8 +223,8 @@ internal class CropWindowMoveHandler(
                 bounds,
                 snapMargin,
                 0f,
-                false,
-                false
+                topMoves = false,
+                bottomMoves = false
             )
             Type.TOP -> adjustTop(
                 rect,
@@ -218,8 +232,8 @@ internal class CropWindowMoveHandler(
                 bounds,
                 snapMargin,
                 0f,
-                false,
-                false
+                leftMoves = false,
+                rightMoves = false
             )
             Type.RIGHT -> adjustRight(
                 rect,
@@ -228,8 +242,8 @@ internal class CropWindowMoveHandler(
                 viewWidth,
                 snapMargin,
                 0f,
-                false,
-                false
+                topMoves = false,
+                bottomMoves = false
             )
             Type.BOTTOM -> adjustBottom(
                 rect,
@@ -238,8 +252,8 @@ internal class CropWindowMoveHandler(
                 viewHeight,
                 snapMargin,
                 0f,
-                false,
-                false
+                leftMoves = false,
+                rightMoves = false
             )
             else -> {
             }
@@ -270,10 +284,16 @@ internal class CropWindowMoveHandler(
                     rect.bottom
                 ) < aspectRatio
             ) {
-                adjustTop(rect, y, bounds, snapMargin, aspectRatio, true, false)
+                adjustTop(rect, y, bounds, snapMargin, aspectRatio,
+                    leftMoves = true,
+                    rightMoves = false
+                )
                 adjustLeftByAspectRatio(rect, aspectRatio)
             } else {
-                adjustLeft(rect, x, bounds, snapMargin, aspectRatio, true, false)
+                adjustLeft(rect, x, bounds, snapMargin, aspectRatio,
+                    topMoves = true,
+                    bottomMoves = false
+                )
                 adjustTopByAspectRatio(rect, aspectRatio)
             }
             Type.TOP_RIGHT -> if (calculateAspectRatio(
@@ -283,10 +303,16 @@ internal class CropWindowMoveHandler(
                     rect.bottom
                 ) < aspectRatio
             ) {
-                adjustTop(rect, y, bounds, snapMargin, aspectRatio, false, true)
+                adjustTop(rect, y, bounds, snapMargin, aspectRatio,
+                    leftMoves = false,
+                    rightMoves = true
+                )
                 adjustRightByAspectRatio(rect, aspectRatio)
             } else {
-                adjustRight(rect, x, bounds, viewWidth, snapMargin, aspectRatio, true, false)
+                adjustRight(rect, x, bounds, viewWidth, snapMargin, aspectRatio,
+                    topMoves = true,
+                    bottomMoves = false
+                )
                 adjustTopByAspectRatio(rect, aspectRatio)
             }
             Type.BOTTOM_LEFT -> if (calculateAspectRatio(
@@ -296,10 +322,16 @@ internal class CropWindowMoveHandler(
                     y
                 ) < aspectRatio
             ) {
-                adjustBottom(rect, y, bounds, viewHeight, snapMargin, aspectRatio, true, false)
+                adjustBottom(rect, y, bounds, viewHeight, snapMargin, aspectRatio,
+                    leftMoves = true,
+                    rightMoves = false
+                )
                 adjustLeftByAspectRatio(rect, aspectRatio)
             } else {
-                adjustLeft(rect, x, bounds, snapMargin, aspectRatio, false, true)
+                adjustLeft(rect, x, bounds, snapMargin, aspectRatio,
+                    topMoves = false,
+                    bottomMoves = true
+                )
                 adjustBottomByAspectRatio(rect, aspectRatio)
             }
             Type.BOTTOM_RIGHT -> if (calculateAspectRatio(
@@ -309,26 +341,41 @@ internal class CropWindowMoveHandler(
                     y
                 ) < aspectRatio
             ) {
-                adjustBottom(rect, y, bounds, viewHeight, snapMargin, aspectRatio, false, true)
+                adjustBottom(rect, y, bounds, viewHeight, snapMargin, aspectRatio,
+                    leftMoves = false,
+                    rightMoves = true
+                )
                 adjustRightByAspectRatio(rect, aspectRatio)
             } else {
-                adjustRight(rect, x, bounds, viewWidth, snapMargin, aspectRatio, false, true)
+                adjustRight(rect, x, bounds, viewWidth, snapMargin, aspectRatio,
+                    topMoves = false,
+                    bottomMoves = true
+                )
                 adjustBottomByAspectRatio(rect, aspectRatio)
             }
             Type.LEFT -> {
-                adjustLeft(rect, x, bounds, snapMargin, aspectRatio, true, true)
+                adjustLeft(rect, x, bounds, snapMargin, aspectRatio, true, bottomMoves = true)
                 adjustTopBottomByAspectRatio(rect, bounds, aspectRatio)
             }
             Type.TOP -> {
-                adjustTop(rect, y, bounds, snapMargin, aspectRatio, true, true)
+                adjustTop(rect, y, bounds, snapMargin, aspectRatio,
+                    leftMoves = true,
+                    rightMoves = true
+                )
                 adjustLeftRightByAspectRatio(rect, bounds, aspectRatio)
             }
             Type.RIGHT -> {
-                adjustRight(rect, x, bounds, viewWidth, snapMargin, aspectRatio, true, true)
+                adjustRight(rect, x, bounds, viewWidth, snapMargin, aspectRatio,
+                    topMoves = true,
+                    bottomMoves = true
+                )
                 adjustTopBottomByAspectRatio(rect, bounds, aspectRatio)
             }
             Type.BOTTOM -> {
-                adjustBottom(rect, y, bounds, viewHeight, snapMargin, aspectRatio, true, true)
+                adjustBottom(rect, y, bounds, viewHeight, snapMargin, aspectRatio,
+                    leftMoves = true,
+                    rightMoves = true
+                )
                 adjustLeftRightByAspectRatio(rect, bounds, aspectRatio)
             }
             else -> {
@@ -396,36 +443,29 @@ internal class CropWindowMoveHandler(
             var newHeight = (rect.right - newLeft) / aspectRatio
             // Checks if the window is too small vertically
             if (newHeight < mMinCropHeight) {
-                newLeft = Math.max(bounds.left, rect.right - mMinCropHeight * aspectRatio)
+                newLeft = bounds.left.coerceAtLeast(rect.right - mMinCropHeight * aspectRatio)
                 newHeight = (rect.right - newLeft) / aspectRatio
             }
             // Checks if the window is too large vertically
             if (newHeight > mMaxCropHeight) {
-                newLeft = Math.max(bounds.left, rect.right - mMaxCropHeight * aspectRatio)
+                newLeft = bounds.left.coerceAtLeast(rect.right - mMaxCropHeight * aspectRatio)
                 newHeight = (rect.right - newLeft) / aspectRatio
             }
             // if top AND bottom edge moves by aspect ratio check that it is within full height bounds
             if (topMoves && bottomMoves) {
-                newLeft = Math.max(
-                    newLeft,
-                    Math.max(bounds.left, rect.right - bounds.height() * aspectRatio)
+                newLeft = newLeft.coerceAtLeast(
+                    bounds.left.coerceAtLeast(rect.right - bounds.height() * aspectRatio)
                 )
             } else { // if top edge moves by aspect ratio check that it is within bounds
                 if (topMoves && rect.bottom - newHeight < bounds.top) {
-                    newLeft = Math.max(
-                        bounds.left,
-                        rect.right - (rect.bottom - bounds.top) * aspectRatio
-                    )
+                    newLeft =
+                        bounds.left.coerceAtLeast(rect.right - (rect.bottom - bounds.top) * aspectRatio)
                     newHeight = (rect.right - newLeft) / aspectRatio
                 }
                 // if bottom edge moves by aspect ratio check that it is within bounds
                 if (bottomMoves && rect.top + newHeight > bounds.bottom) {
-                    newLeft = Math.max(
-                        newLeft,
-                        Math.max(
-                            bounds.left,
-                            rect.right - (bounds.bottom - rect.top) * aspectRatio
-                        )
+                    newLeft = newLeft.coerceAtLeast(
+                        bounds.left.coerceAtLeast(rect.right - (bounds.bottom - rect.top) * aspectRatio)
                     )
                 }
             }
@@ -482,37 +522,30 @@ internal class CropWindowMoveHandler(
             // Checks if the window is too small vertically
             if (newHeight < mMinCropHeight) {
                 newRight =
-                    Math.min(bounds.right, rect.left + mMinCropHeight * aspectRatio)
+                    bounds.right.coerceAtMost(rect.left + mMinCropHeight * aspectRatio)
                 newHeight = (newRight - rect.left) / aspectRatio
             }
             // Checks if the window is too large vertically
             if (newHeight > mMaxCropHeight) {
                 newRight =
-                    Math.min(bounds.right, rect.left + mMaxCropHeight * aspectRatio)
+                    bounds.right.coerceAtMost(rect.left + mMaxCropHeight * aspectRatio)
                 newHeight = (newRight - rect.left) / aspectRatio
             }
             // if top AND bottom edge moves by aspect ratio check that it is within full height bounds
             if (topMoves && bottomMoves) {
-                newRight = Math.min(
-                    newRight,
-                    Math.min(bounds.right, rect.left + bounds.height() * aspectRatio)
+                newRight = newRight.coerceAtMost(
+                    bounds.right.coerceAtMost(rect.left + bounds.height() * aspectRatio)
                 )
             } else { // if top edge moves by aspect ratio check that it is within bounds
                 if (topMoves && rect.bottom - newHeight < bounds.top) {
-                    newRight = Math.min(
-                        bounds.right,
-                        rect.left + (rect.bottom - bounds.top) * aspectRatio
-                    )
+                    newRight =
+                        bounds.right.coerceAtMost(rect.left + (rect.bottom - bounds.top) * aspectRatio)
                     newHeight = (newRight - rect.left) / aspectRatio
                 }
                 // if bottom edge moves by aspect ratio check that it is within bounds
                 if (bottomMoves && rect.top + newHeight > bounds.bottom) {
-                    newRight = Math.min(
-                        newRight,
-                        Math.min(
-                            bounds.right,
-                            rect.left + (bounds.bottom - rect.top) * aspectRatio
-                        )
+                    newRight = newRight.coerceAtMost(
+                        bounds.right.coerceAtMost(rect.left + (bounds.bottom - rect.top) * aspectRatio)
                     )
                 }
             }
@@ -564,36 +597,29 @@ internal class CropWindowMoveHandler(
             var newWidth = (rect.bottom - newTop) * aspectRatio
             // Checks if the crop window is too small horizontally due to aspect ratio adjustment
             if (newWidth < mMinCropWidth) {
-                newTop = Math.max(bounds.top, rect.bottom - mMinCropWidth / aspectRatio)
+                newTop = bounds.top.coerceAtLeast(rect.bottom - mMinCropWidth / aspectRatio)
                 newWidth = (rect.bottom - newTop) * aspectRatio
             }
             // Checks if the crop window is too large horizontally due to aspect ratio adjustment
             if (newWidth > mMaxCropWidth) {
-                newTop = Math.max(bounds.top, rect.bottom - mMaxCropWidth / aspectRatio)
+                newTop = bounds.top.coerceAtLeast(rect.bottom - mMaxCropWidth / aspectRatio)
                 newWidth = (rect.bottom - newTop) * aspectRatio
             }
             // if left AND right edge moves by aspect ratio check that it is within full width bounds
             if (leftMoves && rightMoves) {
-                newTop = Math.max(
-                    newTop,
-                    Math.max(bounds.top, rect.bottom - bounds.width() / aspectRatio)
+                newTop = newTop.coerceAtLeast(
+                    bounds.top.coerceAtLeast(rect.bottom - bounds.width() / aspectRatio)
                 )
             } else { // if left edge moves by aspect ratio check that it is within bounds
                 if (leftMoves && rect.right - newWidth < bounds.left) {
-                    newTop = Math.max(
-                        bounds.top,
-                        rect.bottom - (rect.right - bounds.left) / aspectRatio
-                    )
+                    newTop =
+                        bounds.top.coerceAtLeast(rect.bottom - (rect.right - bounds.left) / aspectRatio)
                     newWidth = (rect.bottom - newTop) * aspectRatio
                 }
                 // if right edge moves by aspect ratio check that it is within bounds
                 if (rightMoves && rect.left + newWidth > bounds.right) {
-                    newTop = Math.max(
-                        newTop,
-                        Math.max(
-                            bounds.top,
-                            rect.bottom - (bounds.right - rect.left) / aspectRatio
-                        )
+                    newTop = newTop.coerceAtLeast(
+                        bounds.top.coerceAtLeast(rect.bottom - (bounds.right - rect.left) / aspectRatio)
                     )
                 }
             }
@@ -648,37 +674,30 @@ internal class CropWindowMoveHandler(
             // Checks if the window is too small horizontally
             if (newWidth < mMinCropWidth) {
                 newBottom =
-                    Math.min(bounds.bottom, rect.top + mMinCropWidth / aspectRatio)
+                    bounds.bottom.coerceAtMost(rect.top + mMinCropWidth / aspectRatio)
                 newWidth = (newBottom - rect.top) * aspectRatio
             }
             // Checks if the window is too large horizontally
             if (newWidth > mMaxCropWidth) {
                 newBottom =
-                    Math.min(bounds.bottom, rect.top + mMaxCropWidth / aspectRatio)
+                    bounds.bottom.coerceAtMost(rect.top + mMaxCropWidth / aspectRatio)
                 newWidth = (newBottom - rect.top) * aspectRatio
             }
             // if left AND right edge moves by aspect ratio check that it is within full width bounds
             if (leftMoves && rightMoves) {
-                newBottom = Math.min(
-                    newBottom,
-                    Math.min(bounds.bottom, rect.top + bounds.width() / aspectRatio)
+                newBottom = newBottom.coerceAtMost(
+                    bounds.bottom.coerceAtMost(rect.top + bounds.width() / aspectRatio)
                 )
             } else { // if left edge moves by aspect ratio check that it is within bounds
                 if (leftMoves && rect.right - newWidth < bounds.left) {
-                    newBottom = Math.min(
-                        bounds.bottom,
-                        rect.top + (rect.right - bounds.left) / aspectRatio
-                    )
+                    newBottom =
+                        bounds.bottom.coerceAtMost(rect.top + (rect.right - bounds.left) / aspectRatio)
                     newWidth = (newBottom - rect.top) * aspectRatio
                 }
                 // if right edge moves by aspect ratio check that it is within bounds
                 if (rightMoves && rect.left + newWidth > bounds.right) {
-                    newBottom = Math.min(
-                        newBottom,
-                        Math.min(
-                            bounds.bottom,
-                            rect.top + (bounds.right - rect.left) / aspectRatio
-                        )
+                    newBottom = newBottom.coerceAtMost(
+                        bounds.bottom.coerceAtMost(rect.top + (bounds.right - rect.left) / aspectRatio)
                     )
                 }
             }
@@ -775,17 +794,8 @@ internal class CropWindowMoveHandler(
             return (right - left) / (bottom - top)
         }
     }
-    // endregion
-    /**
-     * @param cropWindowHandler main crop window handle to get and update the crop window edges
-     * @param touchX the location of the initial toch possition to measure move distance
-     * @param touchY the location of the initial toch possition to measure move distance
-     */
+
     init {
-        mMinCropWidth = cropWindowHandler.minCropWidth
-        mMinCropHeight = cropWindowHandler.minCropHeight
-        mMaxCropWidth = cropWindowHandler.maxCropWidth
-        mMaxCropHeight = cropWindowHandler.maxCropHeight
         calculateTouchOffset(cropWindowHandler.rect, touchX, touchY)
     }
 }

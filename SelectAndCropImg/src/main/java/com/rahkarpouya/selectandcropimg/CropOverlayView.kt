@@ -1,6 +1,6 @@
 package com.rahkarpouya.selectandcropimg
 
-import android.annotation.TargetApi
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.*
 import android.os.Build
@@ -10,59 +10,77 @@ import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.ScaleGestureDetector.SimpleOnScaleGestureListener
 import android.view.View
-import com.rahkarpouya.selectandcropimg.CropImageView.CropShape
-import com.rahkarpouya.selectandcropimg.CropImageView.Guidelines
+import com.rahkarpouya.selectandcropimg.enumClass.CropShape
+import com.rahkarpouya.selectandcropimg.enumClass.CropGuidelines
+import com.rahkarpouya.selectandcropimg.utils.BitmapUtils
 import java.util.*
+import kotlin.math.*
 
 /** A custom View representing the crop window and the shaded background outside the crop window.  */
-class CropOverlayView  // endregion
-@JvmOverloads constructor(
-    context: Context?,
-    attrs: AttributeSet? = null
-) : View(context, attrs) {
+class CropOverlayView @JvmOverloads constructor(context: Context?, attrs: AttributeSet? = null) :
+    View(context, attrs) {
     // region: Fields and Consts
     /** Gesture detector used for multi touch box scaling  */
     private var mScaleDetector: ScaleGestureDetector? = null
+
     /** Boolean to see if multi touch is enabled for the crop rectangle  */
     private var mMultiTouchEnabled = false
+
     /** Handler from crop window stuff, moving and knowing possition.  */
     private val mCropWindowHandler = CropWindowHandler()
+
     /** Listener to publicj crop window changes  */
     private var mCropWindowChangeListener: CropWindowChangeListener? = null
+
     /** Rectangle used for drawing  */
     private val mDrawRect = RectF()
+
     /** The Paint used to draw the white rectangle around the crop area.  */
     private var mBorderPaint: Paint? = null
+
     /** The Paint used to draw the corners of the Border  */
     private var mBorderCornerPaint: Paint? = null
+
     /** The Paint used to draw the guidelines within the crop area when pressed.  */
     private var mGuidelinePaint: Paint? = null
+
     /** The Paint used to darken the surrounding areas outside the crop area.  */
     private var mBackgroundPaint: Paint? = null
+
     /** Used for oval crop window shape or non-straight rotation drawing.  */
     private val mPath = Path()
+
     /** The bounding box around the Bitmap that we are cropping.  */
     private val mBoundsPoints = FloatArray(8)
+
     /** The bounding box around the Bitmap that we are cropping.  */
     private val mCalcBounds = RectF()
+
     /** The bounding image view width used to know the crop overlay is at view edges.  */
     private var mViewWidth = 0
+
     /** The bounding image view height used to know the crop overlay is at view edges.  */
     private var mViewHeight = 0
+
     /** The offset to draw the border corener from the border  */
     private var mBorderCornerOffset = 0f
+
     /** the length of the border corner to draw  */
     private var mBorderCornerLength = 0f
+
     /** The initial crop window padding from image borders  */
     private var mInitialCropWindowPaddingRatio = 0f
+
     /** The radius of the touch zone (in pixels) around a given Handle.  */
     private var mTouchRadius = 0f
+
     /**
      * An edge of the crop window will snap to the corresponding edge of a specified bounding box when
      * the crop window edge is less than or equal to this distance (in pixels) away from the bounding
      * box edge.
      */
     private var mSnapRadius = 0f
+
     /** The Handle that is currently pressed; null if no Handle is pressed.  */
     private var mMoveHandler: CropWindowMoveHandler? = null
     /**
@@ -75,23 +93,31 @@ class CropOverlayView  // endregion
      */
     var isFixAspectRatio = false
         private set
+
     /** save the current aspect ratio of the image  */
     private var mAspectRatioX = 0
+
     /** save the current aspect ratio of the image  */
     private var mAspectRatioY = 0
+
     /**
      * The aspect ratio that the crop area should maintain; this variable is only used when
      * mMaintainAspectRatio is true.
      */
     private var mTargetAspectRatio = mAspectRatioX.toFloat() / mAspectRatioY
+
     /** Instance variables for customizable attributes  */
-    private var mGuidelines: Guidelines? = null
+    private var mCropGuidelines: CropGuidelines? = null
+
     /** The shape of the cropping area - rectangle/circular.  */
     private var mCropShape: CropShape? = null
+
     /** the initial crop window rectangle to set  */
     private val mInitialCropWindowRect = Rect()
+
     /** Whether the Crop View has been initialized for the first time  */
     private var initializedCropWindow = false
+
     /** Used to set back LayerType after changing to software.  */
     private var mOriginalLayerType: Int? = null
 
@@ -177,11 +203,11 @@ class CropOverlayView  // endregion
      * Sets the guidelines for the CropOverlayView to be either on, off, or to show when resizing the
      * application.
      */
-    var guidelines: Guidelines?
-        get() = mGuidelines
+    var cropGuidelines: CropGuidelines?
+        get() = mCropGuidelines
         set(guidelines) {
-            if (mGuidelines != guidelines) {
-                mGuidelines = guidelines
+            if (mCropGuidelines != guidelines) {
+                mCropGuidelines = guidelines
                 if (initializedCropWindow) {
                     invalidate()
                 }
@@ -314,7 +340,7 @@ class CropOverlayView  // endregion
         mCropWindowHandler.setInitialAttributeValues(options)
         cropShape = options.cropShape
         setSnapRadius(options.snapRadius)
-        guidelines = options.guidelines
+        cropGuidelines = options.cropGuidelines
         setFixedAspectRatio(options.fixAspectRatio)
         aspectRatioX = options.aspectRatioX
         aspectRatioY = options.aspectRatioY
@@ -343,12 +369,12 @@ class CropOverlayView  // endregion
      * the image being cropped.
      */
     private fun initCropWindow() {
-        val leftLimit = Math.max(BitmapUtils.getRectLeft(mBoundsPoints), 0f)
-        val topLimit = Math.max(BitmapUtils.getRectTop(mBoundsPoints), 0f)
+        val leftLimit = BitmapUtils.getRectLeft(mBoundsPoints).coerceAtLeast(0f)
+        val topLimit = BitmapUtils.getRectTop(mBoundsPoints).coerceAtLeast(0f)
         val rightLimit =
-            Math.min(BitmapUtils.getRectRight(mBoundsPoints), width.toFloat())
+            BitmapUtils.getRectRight(mBoundsPoints).coerceAtMost(width.toFloat())
         val bottomLimit =
-            Math.min(BitmapUtils.getRectBottom(mBoundsPoints), height.toFloat())
+            BitmapUtils.getRectBottom(mBoundsPoints).coerceAtMost(height.toFloat())
         if (rightLimit <= leftLimit || bottomLimit <= topLimit) {
             return
         }
@@ -370,10 +396,10 @@ class CropOverlayView  // endregion
                 rect.top + mInitialCropWindowRect.height() / mCropWindowHandler.scaleFactorHeight
             // Correct for floating point errors. Crop rect boundaries should not exceed the source Bitmap
 // bounds.
-            rect.left = Math.max(leftLimit, rect.left)
-            rect.top = Math.max(topLimit, rect.top)
-            rect.right = Math.min(rightLimit, rect.right)
-            rect.bottom = Math.min(bottomLimit, rect.bottom)
+            rect.left = leftLimit.coerceAtLeast(rect.left)
+            rect.top = topLimit.coerceAtLeast(rect.top)
+            rect.right = rightLimit.coerceAtMost(rect.right)
+            rect.bottom = bottomLimit.coerceAtMost(rect.bottom)
         } else if (isFixAspectRatio && rightLimit > leftLimit && bottomLimit > topLimit) { // If the image aspect ratio is wider than the crop aspect ratio,
 // then the image height is the determining initial length. Else, vice-versa.
             val bitmapAspectRatio =
@@ -385,10 +411,8 @@ class CropOverlayView  // endregion
                 // dirty fix for wrong crop overlay aspect ratio when using fixed aspect ratio
                 mTargetAspectRatio = mAspectRatioX.toFloat() / mAspectRatioY
                 // Limits the aspect ratio to no less than 40 wide or 40 tall
-                val cropWidth = Math.max(
-                    mCropWindowHandler.minCropWidth,
-                    rect.height() * mTargetAspectRatio
-                )
+                val cropWidth =
+                    mCropWindowHandler.minCropWidth.coerceAtLeast(rect.height() * mTargetAspectRatio)
                 val halfCropWidth = cropWidth / 2f
                 rect.left = centerX - halfCropWidth
                 rect.right = centerX + halfCropWidth
@@ -397,10 +421,8 @@ class CropOverlayView  // endregion
                 rect.right = rightLimit - horizontalPadding
                 val centerY = height / 2f
                 // Limits the aspect ratio to no less than 40 wide or 40 tall
-                val cropHeight = Math.max(
-                    mCropWindowHandler.minCropHeight,
-                    rect.width() / mTargetAspectRatio
-                )
+                val cropHeight =
+                    mCropWindowHandler.minCropHeight.coerceAtLeast(rect.width() / mTargetAspectRatio)
                 val halfCropHeight = cropHeight / 2f
                 rect.top = centerY - halfCropHeight
                 rect.bottom = centerY + halfCropHeight
@@ -439,12 +461,12 @@ class CropOverlayView  // endregion
         }
         calculateBounds(rect)
         if (mCalcBounds.width() > 0 && mCalcBounds.height() > 0) {
-            val leftLimit = Math.max(mCalcBounds.left, 0f)
-            val topLimit = Math.max(mCalcBounds.top, 0f)
+            val leftLimit = mCalcBounds.left.coerceAtLeast(0f)
+            val topLimit = mCalcBounds.top.coerceAtLeast(0f)
             val rightLimit =
-                Math.min(mCalcBounds.right, width.toFloat())
+                mCalcBounds.right.coerceAtMost(width.toFloat())
             val bottomLimit =
-                Math.min(mCalcBounds.bottom, height.toFloat())
+                mCalcBounds.bottom.coerceAtMost(height.toFloat())
             if (rect.left < leftLimit) {
                 rect.left = leftLimit
             }
@@ -458,15 +480,14 @@ class CropOverlayView  // endregion
                 rect.bottom = bottomLimit
             }
         }
-        if (isFixAspectRatio && Math.abs(rect.width() - rect.height() * mTargetAspectRatio) > 0.1) {
+        if (isFixAspectRatio && abs(rect.width() - rect.height() * mTargetAspectRatio) > 0.1) {
             if (rect.width() > rect.height() * mTargetAspectRatio) {
                 val adj =
-                    Math.abs(rect.height() * mTargetAspectRatio - rect.width()) / 2
+                    abs(rect.height() * mTargetAspectRatio - rect.width()) / 2
                 rect.left += adj
                 rect.right -= adj
             } else {
-                val adj =
-                    Math.abs(rect.width() / mTargetAspectRatio - rect.height()) / 2
+                val adj = abs(rect.width() / mTargetAspectRatio - rect.height()) / 2
                 rect.top += adj
                 rect.bottom -= adj
             }
@@ -482,9 +503,9 @@ class CropOverlayView  // endregion
         // Draw translucent background for the cropped area.
         drawBackground(canvas)
         if (mCropWindowHandler.showGuidelines()) { // Determines whether guidelines should be drawn or not
-            if (mGuidelines == Guidelines.ON) {
+            if (mCropGuidelines == CropGuidelines.ON) {
                 drawGuidelines(canvas)
-            } else if (mGuidelines == Guidelines.ON_TOUCH && mMoveHandler != null) { // Draw only when resizing
+            } else if (mCropGuidelines == CropGuidelines.ON_TOUCH && mMoveHandler != null) { // Draw only when resizing
                 drawGuidelines(canvas)
             }
         }
@@ -495,12 +516,12 @@ class CropOverlayView  // endregion
     /** Draw shadow background over the image not including the crop area.  */
     private fun drawBackground(canvas: Canvas) {
         val rect = mCropWindowHandler.rect
-        val left = Math.max(BitmapUtils.getRectLeft(mBoundsPoints), 0f)
-        val top = Math.max(BitmapUtils.getRectTop(mBoundsPoints), 0f)
+        val left = BitmapUtils.getRectLeft(mBoundsPoints).coerceAtLeast(0f)
+        val top = BitmapUtils.getRectTop(mBoundsPoints).coerceAtLeast(0f)
         val right =
-            Math.min(BitmapUtils.getRectRight(mBoundsPoints), width.toFloat())
+            BitmapUtils.getRectRight(mBoundsPoints).coerceAtMost(width.toFloat())
         val bottom =
-            Math.min(BitmapUtils.getRectBottom(mBoundsPoints), height.toFloat())
+            BitmapUtils.getRectBottom(mBoundsPoints).coerceAtMost(height.toFloat())
         if (mCropShape == CropShape.RECTANGLE) {
             if (!isNonStraightAngleRotated || Build.VERSION.SDK_INT <= 17) {
                 canvas.drawRect(left, top, right, rect!!.top, mBackgroundPaint!!)
@@ -518,9 +539,9 @@ class CropOverlayView  // endregion
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     canvas.clipOutPath(mPath)
                 } else {
-                    canvas.clipPath(mPath, Region.Op.INTERSECT)
+                    canvas.clipPath(mPath)
                 }
-                canvas.clipRect(rect!!, Region.Op.XOR)
+                canvas.clipRect(rect!!)
                 canvas.drawRect(left, top, right, bottom, mBackgroundPaint!!)
                 canvas.restore()
             }
@@ -536,7 +557,7 @@ class CropOverlayView  // endregion
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 canvas.clipOutPath(mPath)
             } else {
-                canvas.clipPath(mPath, Region.Op.XOR)
+                canvas.clipPath(mPath)
             }
             canvas.drawRect(left, top, right, bottom, mBackgroundPaint!!)
             canvas.restore()
@@ -560,15 +581,14 @@ class CropOverlayView  // endregion
                 // Draw vertical guidelines.
                 val x1 = rect.left + oneThirdCropWidth
                 val x2 = rect.right - oneThirdCropWidth
-                val yv =
-                    (h * Math.sin(Math.acos((w - oneThirdCropWidth) / w.toDouble()))).toFloat()
+                val yv = (h * sin(acos((w - oneThirdCropWidth) / w.toDouble()))).toFloat()
                 canvas.drawLine(x1, rect.top + h - yv, x1, rect.bottom - h + yv, mGuidelinePaint!!)
                 canvas.drawLine(x2, rect.top + h - yv, x2, rect.bottom - h + yv, mGuidelinePaint!!)
                 // Draw horizontal guidelines.
                 val y1 = rect.top + oneThirdCropHeight
                 val y2 = rect.bottom - oneThirdCropHeight
                 val xv =
-                    (w * Math.cos(Math.asin((h - oneThirdCropHeight) / h.toDouble()))).toFloat()
+                    (w * cos(asin((h - oneThirdCropHeight) / h.toDouble()))).toFloat()
                 canvas.drawLine(rect.left + w - xv, y1, rect.right - w + xv, y1, mGuidelinePaint!!)
                 canvas.drawLine(rect.left + w - xv, y2, rect.right - w + xv, y2, mGuidelinePaint!!)
             } else { // Draw vertical guidelines.
@@ -675,6 +695,7 @@ class CropOverlayView  // endregion
         }
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean { // If this View is not enabled, don't allow for touch interactions.
         return if (isEnabled) {
             if (mMultiTouchEnabled) {
@@ -809,32 +830,20 @@ class CropOverlayView  // endregion
             val c1 = -c0
             val d0 = rect.top - c0 * rect.left
             val d1 = rect.top - c1 * rect.right
-            left = Math.max(
-                left,
-                if ((d0 - b0) / (a0 - c0) < rect.right) (d0 - b0) / (a0 - c0) else left
-            )
-            left = Math.max(
-                left,
-                if ((d0 - b1) / (a1 - c0) < rect.right) (d0 - b1) / (a1 - c0) else left
-            )
-            left = Math.max(
-                left,
-                if ((d1 - b3) / (a1 - c1) < rect.right) (d1 - b3) / (a1 - c1) else left
-            )
-            right = Math.min(
-                right,
-                if ((d1 - b1) / (a1 - c1) > rect.left) (d1 - b1) / (a1 - c1) else right
-            )
-            right = Math.min(
-                right,
-                if ((d1 - b2) / (a0 - c1) > rect.left) (d1 - b2) / (a0 - c1) else right
-            )
-            right = Math.min(
-                right,
-                if ((d0 - b2) / (a0 - c0) > rect.left) (d0 - b2) / (a0 - c0) else right
-            )
-            top = Math.max(top, Math.max(a0 * left + b0, a1 * right + b1))
-            bottom = Math.min(bottom, Math.min(a1 * left + b3, a0 * right + b2))
+            left =
+                left.coerceAtLeast(if ((d0 - b0) / (a0 - c0) < rect.right) (d0 - b0) / (a0 - c0) else left)
+            left =
+                left.coerceAtLeast(if ((d0 - b1) / (a1 - c0) < rect.right) (d0 - b1) / (a1 - c0) else left)
+            left =
+                left.coerceAtLeast(if ((d1 - b3) / (a1 - c1) < rect.right) (d1 - b3) / (a1 - c1) else left)
+            right =
+                right.coerceAtMost(if ((d1 - b1) / (a1 - c1) > rect.left) (d1 - b1) / (a1 - c1) else right)
+            right =
+                right.coerceAtMost(if ((d1 - b2) / (a0 - c1) > rect.left) (d1 - b2) / (a0 - c1) else right)
+            right =
+                right.coerceAtMost(if ((d0 - b2) / (a0 - c0) > rect.left) (d0 - b2) / (a0 - c0) else right)
+            top = top.coerceAtLeast((a0 * left + b0).coerceAtLeast(a1 * right + b1))
+            bottom = bottom.coerceAtMost((a1 * left + b3).coerceAtMost(a0 * right + b2))
             mCalcBounds.left = left
             mCalcBounds.top = top
             mCalcBounds.right = right
@@ -869,10 +878,9 @@ class CropOverlayView  // endregion
         fun onCropWindowChanged(inProgress: Boolean)
     }
     // endregion
-// region: Inner class: ScaleListener
+    // region: Inner class: ScaleListener
     /** Handle scaling the rectangle based on two finger input  */
     private inner class ScaleListener : SimpleOnScaleGestureListener() {
-        @TargetApi(Build.VERSION_CODES.HONEYCOMB)
         override fun onScale(detector: ScaleGestureDetector): Boolean {
             val rect = mCropWindowHandler.rect
             val x = detector.focusX
